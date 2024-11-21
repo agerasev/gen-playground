@@ -9,6 +9,7 @@ class Mlp(nn.Sequential):
         for in_dim, out_dim, is_last in zip(
             dims[:-1], dims[1:], [i == len(dims) for i in range(len(dims) - 1)]
         ):
+            self.append(nn.BatchNorm1d(in_dim))
             self.append(nn.Linear(in_dim, out_dim))
             if not is_last:
                 self.append(nn.ReLU())
@@ -18,9 +19,8 @@ class Mlp(nn.Sequential):
 
 
 class Encoder(nn.Module):
-    def __init__(self, image_dims: tuple[int, int], latent_dim: int):
+    def __init__(self, image_dims: tuple[int, int], hidden_dim: int, latent_dim: int):
         super().__init__()
-        hidden_dim = 2 * latent_dim
         self.latent_dim = latent_dim
         self.mlp = Mlp([np.prod(image_dims), hidden_dim, hidden_dim, 2 * latent_dim])
 
@@ -34,9 +34,8 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, latent_dim: int, image_dims: tuple[int, int]):
+    def __init__(self, latent_dim: int, hidden_dim: int, image_dims: tuple[int, int]):
         super().__init__()
-        hidden_dim = 2 * latent_dim
         self.image_dims = image_dims
         self.mlp = Mlp([latent_dim, hidden_dim, hidden_dim, np.prod(image_dims)])
 
