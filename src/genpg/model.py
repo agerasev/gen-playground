@@ -22,15 +22,14 @@ class Encoder(nn.Module):
     def __init__(self, image_dims: tuple[int, int], hidden_dim: int, latent_dim: int):
         super().__init__()
         self.latent_dim = latent_dim
-        self.mlp = Mlp([np.prod(image_dims), hidden_dim, hidden_dim, 2 * latent_dim])
+        self.mlp = Mlp([np.prod(image_dims), hidden_dim, hidden_dim, latent_dim])
 
-    def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, x: Tensor) -> Tensor:
         r"""
         Input: input image of dims (batch_size, image_height, image_width)
-        Output: mean and variance of dims (batch_size, latent_dim)
+        Output: latent vector of dims (batch_size, latent_dim)
         """
-        z = self.mlp.forward(x.flatten(1))
-        return z[:, : self.latent_dim], z[:, self.latent_dim :]
+        return self.mlp.forward(x.flatten(1))
 
 
 class Decoder(nn.Module):
