@@ -43,8 +43,7 @@ class ConvNet(nn.Sequential):
         last_dim = layers[0][0]
         for i, n_channels in enumerate(layers):
             assert len(n_channels) >= 1
-            if len(n_channels) == 1:
-                assert n_channels[0] == last_dim
+            assert n_channels[0] == last_dim
             for j, (in_dim, out_dim) in enumerate(zip(n_channels[:-1], n_channels[1:])):
                 self.append(nn.Conv2d(in_dim, out_dim, kernel_size, padding="same"))
                 if j + 1 < len(n_channels) - 1:
@@ -94,7 +93,7 @@ class Encoder(nn.Module):
         return x
 
 
-class Decoder(nn.Sequential):
+class Decoder(nn.Module):
     def __init__(
         self,
         fc_dims: int,
