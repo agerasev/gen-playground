@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Stats:
+class Accum:
     def __init__(self, *names: str):
         self.names = names
         self.items = []
