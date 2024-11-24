@@ -45,7 +45,7 @@ class ConvLayer(nn.Module):
         self.pool: nn.Module | None = None
         if scale != 1:
             if scale > 1:
-                self.pool = nn.UpsamplingBilinear2d(None, round(scale))
+                self.pool = nn.UpsamplingNearest2d(None, round(scale))
             else:
                 self.pool = nn.MaxPool2d(round(1.0 / scale))
 
