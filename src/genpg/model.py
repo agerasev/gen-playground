@@ -45,9 +45,11 @@ class ConvLayer(nn.Module):
         self.pool: nn.Module | None = None
         if scale != 1:
             if scale > 1:
-                self.pool = nn.UpsamplingNearest2d(None, round(scale))
+                s = round(scale)
+                self.pool = nn.UpsamplingNearest2d(None, s)
             else:
-                self.pool = nn.MaxPool2d(round(1.0 / scale))
+                s = round(1.0 / scale)
+                self.pool = nn.MaxPool2d(s)
 
     def forward(self, x: Tensor) -> Tensor:
         x = self.convs(x)
@@ -141,25 +143,36 @@ class Decoder(nn.Module):
         return x.squeeze(1)
 
 
-class UNet(nn.Module):
+class TimestepModule(nn.Module):
+    def forward_with_timestep(self, x: Tensor, t: Tensor | None) -> Tensor:
+        raise NotImplementedError()
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.forward_with_timestep(x, None)
+
+
+class UNet(TimestepModule):
     def __init__(
         self,
-        down_layers: list[list[int]],
-        middle_layer: list[int],
+        n_steps: int,
+        layers: list[list[int]],
+        bottleneck: tuple[list[int], list[int]],
         kernel_size: int,
         scale: int = 2,
     ):
         super().__init__()
 
         self.down: nn.ModuleList[ConvLayer] = nn.ModuleList()
-        for layer in down_layers:
+        for layer in layers:
             self.down.append(ConvLayer(layer, kernel_size, scale=(1 / scale)))
 
-        self.middle = ConvLayer(middle_layer, kernel_size, scale=scale)
+        self.middle_pre = ConvLayer(bottleneck[0], kernel_size, scale=1)
+        self.timestep_emb = nn.Embedding(n_steps, bottleneck[1][0])
+        self.middle_post = ConvLayer(bottleneck[1], kernel_size, scale=scale)
 
         self.up: nn.ModuleList[ConvLayer] = nn.ModuleList()
-        for i, layer in enumerate(reversed(down_layers)):
-            is_last = i + 1 == len(down_layers)
+        for i, layer in enumerate(reversed(layers)):
+            is_last = i + 1 == len(layers)
             layer = list(reversed(layer))
             layer[0] *= 2
             self.up.append(
@@ -170,7 +183,7 @@ class UNet(nn.Module):
                 )
             )
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward_with_timestep(self, x: Tensor, t: Tensor | None) -> Tensor:
         x = x.unsqueeze(1)
 
         skips = []
@@ -180,7 +193,11 @@ class UNet(nn.Module):
             skips.append(x)
             x = layer.pool(x)
 
-        x = self.middle(x)
+        x = self.middle_pre(x)
+        if t is not None:
+            emb = self.timestep_emb.forward(t)
+            x = x + emb.reshape((*emb.shape, 1, 1))
+        x = self.middle_post(x)
 
         for layer, add in zip(self.up, reversed(skips)):
             if add.shape[-2:] != x.shape[-2:]:
