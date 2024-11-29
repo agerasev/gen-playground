@@ -1,11 +1,5 @@
 # gen-playground
 
-## Run Hello script
-
-```sh
-uv run -m genpg.hello
-```
-
 ## Run Jupyter Lab
 
 ```sh
